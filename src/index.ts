@@ -1,13 +1,17 @@
-import { Hono } from 'hono'
-import { drizzle } from 'drizzle-orm/bun-sqlite';
+import homepage from "../client/index.html";
+import { createApiApp } from "./api/app";
+import { getEnv } from "./config/env";
 
-const db = drizzle(process.env.DB_FILE_NAME!);
+const env = getEnv();
+const api = createApiApp({ env });
 
+const server = Bun.serve({
+  port: env.port,
+  development: env.nodeEnv !== "production",
+  routes: {
+    "/": homepage,
+  },
+  fetch: api.fetch,
+});
 
-const app = new Hono()
-
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-export default app
+console.info(`Handbook assistant listening on ${server.url}`);

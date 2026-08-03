@@ -1,8 +1,25 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
     "types": ["bun"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
-  }
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src/**/*.ts",
+    "client/**/*.ts",
+    "client/**/*.tsx",
+    "scripts/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
 }
