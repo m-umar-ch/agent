@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createMiddleware } from "hono/factory";
+import type { ApiContext } from "../context";
 import { errorResponse } from "../errors";
 
 function apiKeysMatch(candidate: string, expected: string): boolean {
@@ -18,9 +19,15 @@ function bearerToken(value: string | undefined): string | null {
 }
 
 export function createApiKeyMiddleware(expectedApiKey: string) {
-  return createMiddleware(async (context, next) => {
+  return createMiddleware<ApiContext>(async (context, next) => {
     const candidate = bearerToken(context.req.header("Authorization"));
     if (candidate === null || !apiKeysMatch(candidate, expectedApiKey)) {
+      context.get("log").set({
+        auth: {
+          outcome: "denied",
+          reason: candidate === null ? "missing_bearer" : "invalid_key",
+        },
+      });
       context.header("WWW-Authenticate", 'Bearer realm="handbook"');
       return errorResponse(
         context,
@@ -45,7 +52,7 @@ export function createRateLimitMiddleware(
 ) {
   let window: RateLimitWindow | undefined;
 
-  return createMiddleware(async (context, next) => {
+  return createMiddleware<ApiContext>(async (context, next) => {
     const now = Date.now();
     window =
       window === undefined || window.resetAt <= now
@@ -57,6 +64,13 @@ export function createRateLimitMiddleware(
         1,
         Math.ceil((window.resetAt - now) / 1_000),
       );
+      context.get("log").set({
+        rateLimit: {
+          outcome: "limited",
+          limit,
+          retryAfterSeconds,
+        },
+      });
       context.header("Retry-After", String(retryAfterSeconds));
       return errorResponse(
         context,
@@ -67,6 +81,10 @@ export function createRateLimitMiddleware(
     }
 
     window.count += 1;
+    context.get("log").set({
+      auth: { outcome: "authorized" },
+      rateLimit: { limit, remaining: Math.max(0, limit - window.count) },
+    });
 
     context.header("X-RateLimit-Limit", String(limit));
     context.header("X-RateLimit-Remaining", String(Math.max(0, limit - window.count)));

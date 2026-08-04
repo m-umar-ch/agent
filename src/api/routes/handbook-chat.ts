@@ -3,6 +3,7 @@ import {
   safeValidateUIMessages,
   smoothStream,
 } from "ai";
+import type { RequestLogger } from "evlog";
 import type { Handler } from "hono";
 import { z } from "zod";
 import type {
@@ -11,6 +12,7 @@ import type {
 } from "../../agent/handbook-agent";
 import type { AppEnv } from "../../config/env";
 import { handbookTools } from "../../handbook/tools";
+import type { ApiContext } from "../context";
 import { errorResponse } from "../errors";
 
 const chatRequestSchema = z
@@ -65,6 +67,22 @@ async function readRequestBody(
 class UnsafeMessageHistoryError extends Error {}
 class MessageTextTooLongError extends Error {}
 class ChatTextTooLongError extends Error {}
+
+function logClientError(
+  log: RequestLogger,
+  code: string,
+  status: number,
+  metadata: Record<string, number | string | boolean> = {},
+) {
+  log.set({
+    error: {
+      category: "client",
+      code,
+      status,
+      ...metadata,
+    },
+  });
+}
 
 function userOnlyHistory(
   messages: readonly HandbookUIMessage[],
@@ -124,14 +142,17 @@ function userOnlyHistory(
 export function createHandbookChatHandler(options: {
   env: AppEnv;
   getAgent: () => HandbookAgent;
-}): Handler {
+}): Handler<ApiContext> {
   return async context => {
-    const requestId = crypto.randomUUID();
+    const requestId = context.get("requestId");
+    const log = context.get("log");
+    const validationStartedAt = performance.now();
     const declaredLength = contentLength(context.req.raw);
     if (
       declaredLength !== null &&
       declaredLength > options.env.maxRequestBytes
     ) {
+      logClientError(log, "request_too_large", 413, { declaredLength });
       return errorResponse(
         context,
         413,
@@ -142,6 +163,7 @@ export function createHandbookChatHandler(options: {
     }
 
     let rawBody: string;
+    const bodyReadStartedAt = performance.now();
     try {
       rawBody = await readRequestBody(
         context.req.raw,
@@ -149,6 +171,7 @@ export function createHandbookChatHandler(options: {
       );
     } catch (error) {
       if (error instanceof RequestBodyTooLargeError) {
+        logClientError(log, "request_too_large", 413);
         return errorResponse(
           context,
           413,
@@ -157,6 +180,7 @@ export function createHandbookChatHandler(options: {
           requestId,
         );
       }
+      logClientError(log, "invalid_request", 400);
       return errorResponse(
         context,
         400,
@@ -170,6 +194,9 @@ export function createHandbookChatHandler(options: {
     try {
       json = JSON.parse(rawBody);
     } catch {
+      logClientError(log, "invalid_json", 400, {
+        bodyChars: rawBody.length,
+      });
       return errorResponse(
         context,
         400,
@@ -181,6 +208,9 @@ export function createHandbookChatHandler(options: {
 
     const request = chatRequestSchema.safeParse(json);
     if (!request.success) {
+      logClientError(log, "invalid_request", 400, {
+        issueCount: request.error.issues.length,
+      });
       return errorResponse(
         context,
         400,
@@ -191,6 +221,9 @@ export function createHandbookChatHandler(options: {
     }
 
     if (request.data.messages.length > options.env.maxChatMessages) {
+      logClientError(log, "too_many_messages", 413, {
+        messageCount: request.data.messages.length,
+      });
       return errorResponse(
         context,
         413,
@@ -205,6 +238,7 @@ export function createHandbookChatHandler(options: {
       tools: handbookTools,
     });
     if (!validated.success) {
+      logClientError(log, "invalid_messages", 400);
       return errorResponse(
         context,
         400,
@@ -230,6 +264,11 @@ export function createHandbookChatHandler(options: {
           : errorCode === "chat_text_too_large"
             ? `A chat may contain at most ${options.env.maxChatTextChars} characters of employee text.`
             : "Only employee text messages are accepted as conversation history.";
+      logClientError(
+        log,
+        errorCode,
+        errorCode === "unsafe_message_history" ? 400 : 413,
+      );
       return errorResponse(
         context,
         errorCode === "unsafe_message_history" ? 400 : 413,
@@ -239,7 +278,24 @@ export function createHandbookChatHandler(options: {
       );
     }
 
-    const startedAt = performance.now();
+    log.set({
+      handbookChat: {
+        id: request.data.id,
+        messageCount: uiMessages.length,
+        bodyReadMs: Math.round(performance.now() - bodyReadStartedAt),
+        validationMs: Math.round(performance.now() - validationStartedAt),
+        model: options.env.openaiModel,
+      },
+    });
+
+    const agentStartedAt = performance.now();
+    const steps: Array<{
+      elapsedMs: number;
+      finishReason: string;
+      tools: string[];
+      inputTokens: number | undefined;
+      outputTokens: number | undefined;
+    }> = [];
     const response = await createAgentUIStreamResponse({
       agent: options.getAgent(),
       uiMessages,
@@ -254,27 +310,41 @@ export function createHandbookChatHandler(options: {
         "X-Request-Id": requestId,
       },
       onStepEnd: event => {
-        console.info(
-          JSON.stringify({
-            event: "handbook_agent_step",
-            requestId,
-            elapsedMs: Math.round(performance.now() - startedAt),
-            finishReason: event.finishReason,
-            tools: event.toolCalls.map(toolCall => toolCall.toolName),
-            inputTokens: event.usage.inputTokens,
-            outputTokens: event.usage.outputTokens,
-          }),
-        );
+        steps.push({
+          elapsedMs: Math.round(performance.now() - agentStartedAt),
+          finishReason: event.finishReason,
+          tools: event.toolCalls.map(toolCall => toolCall.toolName),
+          inputTokens: event.usage.inputTokens,
+          outputTokens: event.usage.outputTokens,
+        });
+        log.set({
+          handbookAgent: {
+            outcome:
+              event.finishReason === "stop" ? "completed" : "in_progress",
+            stepCount: steps.length,
+            steps,
+            totalInputTokens: steps.reduce(
+              (total, step) => total + (step.inputTokens ?? 0),
+              0,
+            ),
+            totalOutputTokens: steps.reduce(
+              (total, step) => total + (step.outputTokens ?? 0),
+              0,
+            ),
+            durationMs: Math.round(performance.now() - agentStartedAt),
+          },
+        });
       },
       onError: error => {
-        console.error(
-          JSON.stringify({
-            event: "handbook_agent_error",
-            requestId,
+        const aborted = context.req.raw.signal.aborted;
+        log.set({
+          handbookAgent: {
+            outcome: aborted ? "aborted" : "error",
+            stepCount: steps.length,
             errorType:
               error instanceof Error ? error.constructor.name : "UnknownError",
-          }),
-        );
+          },
+        });
         return "The handbook assistant could not complete this request.";
       },
     });

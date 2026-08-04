@@ -151,6 +151,36 @@ describe("API application", () => {
     expect(guarded.calls).toBe(0);
   });
 
+  test("correlates client request IDs and auth outcomes with wide events", async () => {
+    const events: Record<string, unknown>[] = [];
+    const app = createApiApp({
+      env: SAFE_ENV,
+      getAgent: () => {
+        throw new Error("Agent must not run for an unauthorized request.");
+      },
+      drain: ({ event }) => {
+        events.push(event as Record<string, unknown>);
+      },
+    });
+    const requestId = "request-correlation-test";
+    const response = await app.request("/api/handbook/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Request-Id": requestId,
+      },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("x-request-id")).toBe(requestId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      requestId,
+      auth: { outcome: "denied", reason: "missing_bearer" },
+    });
+  });
+
   test("rejects missing and incorrect API keys before request parsing", async () => {
     const guarded = appWithAgentGuard();
     for (const authorization of [
@@ -429,11 +459,15 @@ describe("API application", () => {
     });
     const agent = createHandbookAgent(model);
     let agentGetterCalls = 0;
+    const wideEvents: Record<string, unknown>[] = [];
     const app = createApiApp({
       env: Object.freeze({ ...SAFE_ENV, maxChatMessages: 5 }),
       getAgent: () => {
         agentGetterCalls += 1;
         return agent;
+      },
+      drain: ({ event }) => {
+        wideEvents.push(event as Record<string, unknown>);
       },
     });
 
@@ -511,6 +545,20 @@ describe("API application", () => {
     expect(textDeltas.map(event => event.delta ?? "").join("")).toBe(
       "Employees receive 28 paid leave days.",
     );
+    expect(wideEvents).toHaveLength(1);
+    expect(wideEvents[0]).toMatchObject({
+      handbookChat: {
+        id: "chat-test",
+        messageCount: 2,
+        model: "gpt-test-model",
+      },
+      handbookAgent: {
+        outcome: "completed",
+        stepCount: 2,
+        totalInputTokens: 20,
+        totalOutputTokens: 10,
+      },
+    });
   });
 
   test("redacts a handbook tool execution failure while allowing a safe final answer", async () => {

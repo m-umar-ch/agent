@@ -24,6 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^1.0.0-rc.4",
+    "evlog": "^2.24.0",
     "hono": "^4.12.34",
     "lucide-react": "^1.28.0",
     "radix-ui": "^1.6.7",

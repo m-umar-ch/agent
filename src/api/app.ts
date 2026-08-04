@@ -1,9 +1,12 @@
 import { Hono } from "hono";
+import { initLogger, type DrainFn } from "evlog";
+import { evlog } from "evlog/hono";
 import {
   getHandbookAgent,
   type HandbookAgent,
 } from "../agent/handbook-agent";
 import { getEnv, type AppEnv } from "../config/env";
+import type { ApiContext } from "./context";
 import { errorResponse } from "./errors";
 import {
   createApiKeyMiddleware,
@@ -14,10 +17,32 @@ import { createHandbookChatHandler } from "./routes/handbook-chat";
 export function createApiApp(options: {
   env?: AppEnv;
   getAgent?: () => HandbookAgent;
+  drain?: DrainFn;
 } = {}) {
   const env = options.env ?? getEnv();
   const getAgent = options.getAgent ?? getHandbookAgent;
-  const app = new Hono();
+  initLogger({
+    env: {
+      service: "handbook-agent",
+      environment: env.nodeEnv,
+    },
+    pretty: env.nodeEnv === "development",
+    silent: env.nodeEnv === "test",
+    drain: env.nodeEnv === "test" ? () => {} : undefined,
+    redact: true,
+  });
+
+  const app = new Hono<ApiContext>();
+
+  app.use("/api/*", evlog({ drain: options.drain }));
+
+  app.use("/api/*", async (context, next) => {
+    const requestId = context.req.header("X-Request-Id") ?? crypto.randomUUID();
+    context.set("requestId", requestId);
+    context.header("X-Request-Id", requestId);
+    context.get("log").set({ requestId });
+    await next();
+  });
 
   app.use("/api/*", async (context, next) => {
     context.header("X-Content-Type-Options", "nosniff");
@@ -55,14 +80,13 @@ export function createApiApp(options: {
   );
 
   app.onError((error, context) => {
-    const requestId = crypto.randomUUID();
-    console.error(
-      JSON.stringify({
+    const requestId = context.get("requestId");
+    context.get("log").set({
+      error: {
         event: "api_error",
-        requestId,
-        errorType: error.constructor.name,
-      }),
-    );
+        type: error.constructor.name,
+      },
+    });
     return errorResponse(
       context,
       500,
