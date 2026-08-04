@@ -1,3 +1,4 @@
+import { log } from "evlog";
 import homepage from "../client/index.html";
 import { createApiApp } from "./api/app";
 import { getEnv } from "./config/env";
@@ -14,4 +15,4 @@ const server = Bun.serve({
   fetch: api.fetch,
 });
 
-console.info(`Handbook assistant listening on ${server.url}`);
+log.info("server", `Server running in "${env.nodeEnv}" mode on port ${env.port}`);

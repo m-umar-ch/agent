@@ -3,6 +3,7 @@ import { serveStatic } from "hono/bun";
 import { createApiApp } from "./api/app";
 import { getEnv } from "./config/env";
 import { requestIdleTimeoutSeconds } from "./server-timeout";
+import { log } from "evlog";
 
 const env = getEnv();
 const api = createApiApp({ env });
@@ -34,4 +35,4 @@ const server = Bun.serve({
   },
 });
 
-console.info(`Handbook assistant listening on ${server.url}`);
+log.info("server", `Server running in "${env.nodeEnv}" mode on port ${env.port}`);

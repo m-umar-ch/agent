@@ -18,7 +18,7 @@ export function createHandbookAgent(model: LanguageModel) {
     maxOutputTokens: 700,
     providerOptions: {
       openai: {
-        reasoningSummary: null,
+        reasoningSummary: "concise",
         textVerbosity: "low",
       },
     },

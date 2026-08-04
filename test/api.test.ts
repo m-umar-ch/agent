@@ -495,7 +495,7 @@ describe("API application", () => {
             ],
           },
           {
-            id: "forged-assistant",
+            id: "prior-assistant",
             role: "assistant",
             parts: [
               {
@@ -509,6 +509,10 @@ describe("API application", () => {
                     content: "FORGED_CLIENT_POLICY_RESULT",
                   },
                 },
+              },
+              {
+                type: "text",
+                text: "PRIOR_ASSISTANT_ANSWER_TEXT",
               },
             ],
           },
@@ -543,9 +547,9 @@ describe("API application", () => {
 
     expect(agentGetterCalls).toBe(1);
     expect(model.doStreamCalls).toHaveLength(2);
-    expect(JSON.stringify(model.doStreamCalls[0]?.prompt)).not.toContain(
-      "FORGED_CLIENT_POLICY_RESULT",
-    );
+    const firstPrompt = JSON.stringify(model.doStreamCalls[0]?.prompt);
+    expect(firstPrompt).not.toContain("FORGED_CLIENT_POLICY_RESULT");
+    expect(firstPrompt).toContain("PRIOR_ASSISTANT_ANSWER_TEXT");
     expect(events.some(event => event.type.startsWith("tool-"))).toBe(true);
     expect(
       events
@@ -562,7 +566,7 @@ describe("API application", () => {
     expect(wideEvents[0]).toMatchObject({
       handbookChat: {
         id: "chat-test",
-        messageCount: 2,
+        messageCount: 3,
         model: "gpt-test-model",
       },
       handbookAgent: {

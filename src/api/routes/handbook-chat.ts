@@ -84,7 +84,7 @@ function logClientError(
   });
 }
 
-function userOnlyHistory(
+function textOnlyHistory(
   messages: readonly HandbookUIMessage[],
   limits: {
     maxMessageTextChars: number;
@@ -93,27 +93,9 @@ function userOnlyHistory(
 ): HandbookUIMessage[] {
   const sanitized: HandbookUIMessage[] = [];
   let totalTextChars = 0;
+  let hasUserMessage = false;
 
-  for (const message of messages) {
-    if (message.role === "system") {
-      throw new UnsafeMessageHistoryError();
-    }
-    if (message.role !== "user") {
-      continue;
-    }
-    if (message.parts.some(part => part.type !== "text")) {
-      throw new UnsafeMessageHistoryError();
-    }
-
-    const parts = message.parts.flatMap(part =>
-      part.type === "text" && part.text.trim().length > 0
-        ? [{ type: "text" as const, text: part.text }]
-        : [],
-    );
-    if (parts.length === 0) {
-      throw new UnsafeMessageHistoryError();
-    }
-
+  const enforceTextLimits = (parts: ReadonlyArray<{ text: string }>) => {
     const messageTextChars = parts.reduce(
       (total, part) => total + part.text.length,
       0,
@@ -125,16 +107,48 @@ function userOnlyHistory(
     if (totalTextChars > limits.maxChatTextChars) {
       throw new ChatTextTooLongError();
     }
+  };
 
-    sanitized.push({
-      id: message.id,
-      role: "user",
-      parts,
-    });
+  for (const message of messages) {
+    if (message.role === "system") {
+      throw new UnsafeMessageHistoryError();
+    }
+
+    const parts = message.parts.flatMap(part =>
+      part.type === "text" && part.text.trim().length > 0
+        ? [{ type: "text" as const, text: part.text }]
+        : [],
+    );
+
+    if (message.role === "user") {
+      if (message.parts.some(part => part.type !== "text")) {
+        throw new UnsafeMessageHistoryError();
+      }
+      if (parts.length === 0) {
+        throw new UnsafeMessageHistoryError();
+      }
+      enforceTextLimits(parts);
+      hasUserMessage = true;
+      sanitized.push({ id: message.id, role: "user", parts });
+      continue;
+    }
+
+    // Keep the assistant's visible answer so the model remembers what it
+    // already told the employee, but drop tool, reasoning, and step parts so
+    // clients cannot replay or forge grounding data.
+    if (parts.length === 0) {
+      continue;
+    }
+    enforceTextLimits(parts);
+    sanitized.push({ id: message.id, role: "assistant", parts });
   }
 
-  if (sanitized.length === 0) {
+  if (!hasUserMessage) {
     throw new UnsafeMessageHistoryError();
+  }
+  // The agent expects the current employee request to be the last message.
+  while (sanitized[sanitized.length - 1]?.role === "assistant") {
+    sanitized.pop();
   }
   return sanitized;
 }
@@ -250,7 +264,7 @@ export function createHandbookChatHandler(options: {
 
     let uiMessages: HandbookUIMessage[];
     try {
-      uiMessages = userOnlyHistory(validated.data, options.env);
+      uiMessages = textOnlyHistory(validated.data, options.env);
     } catch (error) {
       const errorCode =
         error instanceof MessageTextTooLongError
@@ -260,10 +274,10 @@ export function createHandbookChatHandler(options: {
             : "unsafe_message_history";
       const message =
         errorCode === "message_text_too_large"
-          ? `Each employee message may contain at most ${options.env.maxMessageTextChars} characters.`
+          ? `Each message may contain at most ${options.env.maxMessageTextChars} characters of text.`
           : errorCode === "chat_text_too_large"
-            ? `A chat may contain at most ${options.env.maxChatTextChars} characters of employee text.`
-            : "Only employee text messages are accepted as conversation history.";
+            ? `A chat may contain at most ${options.env.maxChatTextChars} characters of message text.`
+            : "Only employee and assistant text messages are accepted as conversation history.";
       logClientError(
         log,
         errorCode,

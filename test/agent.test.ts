@@ -45,7 +45,7 @@ describe("handbook agent with AI SDK v7 mock models", () => {
     expect(firstCall.reasoning).toBe("minimal");
     expect(firstCall.maxOutputTokens).toBe(700);
     expect(firstCall.providerOptions).toEqual({
-      openai: { reasoningSummary: null, textVerbosity: "low" },
+      openai: { reasoningSummary: "concise", textVerbosity: "low" },
     });
     expect(firstCall.tools).toHaveLength(15);
     expect(
@@ -72,6 +72,15 @@ describe("handbook agent with AI SDK v7 mock models", () => {
     expect(systemInstructions).toContain("Keep most answers under 120 words");
     expect(systemInstructions).toContain(
       "Do not append policy names, section headings, citations",
+    );
+    expect(systemInstructions).toContain(
+      "Treat the final employee message as the current request",
+    );
+    expect(systemInstructions).toContain(
+      "do not simply repeat the inaccessible step",
+    );
+    expect(systemInstructions).toContain(
+      "hr.flags entry documents uncertainty",
     );
   });
 
