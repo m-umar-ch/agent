@@ -301,7 +301,7 @@ export function createHandbookChatHandler(options: {
       uiMessages,
       abortSignal: context.req.raw.signal,
       timeout: { totalMs: options.env.agentTimeoutMs },
-      sendReasoning: false,
+      sendReasoning: true,
       sendSources: false,
       experimental_transform: smoothStream({ chunking: "word" }),
       headers: {

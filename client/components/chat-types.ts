@@ -1,6 +1,5 @@
 import type {
   DynamicToolUIPart,
-  StepStartUIPart,
   ToolUIPart,
   UIMessage,
 } from 'ai';
@@ -16,8 +15,6 @@ export type HandbookTools =
 export type HandbookToolPart =
   | ToolUIPart<HandbookTools>
   | DynamicToolUIPart;
-
-export type ActivityPart = StepStartUIPart | HandbookToolPart;
 
 const POLICY_NAMES: Record<string, string> = {
   get_employment_policies: 'Employment policies',
@@ -81,62 +78,3 @@ export function getToolStatus(part: HandbookToolPart): {
   }
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-export function getHrWarningCount(part: HandbookToolPart): number {
-  if (part.state !== 'output-available') return 0;
-
-  const output = asRecord(part.output);
-  if (!output) return 0;
-  const hr = asRecord(output.hr);
-  if (
-    typeof hr?.flagCount === 'number' &&
-    Number.isFinite(hr.flagCount) &&
-    hr.flagCount > 0
-  ) {
-    return Math.floor(hr.flagCount);
-  }
-  if (Array.isArray(hr?.flags)) {
-    return hr.flags.length;
-  }
-
-  for (const key of [
-    'hrWarningCount',
-    'hr_warning_count',
-    'needsHrConfirmationCount',
-  ]) {
-    const value = output[key];
-    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-      return Math.floor(value);
-    }
-  }
-
-  for (const key of ['hrWarnings', 'hr_warnings']) {
-    const value = output[key];
-    if (Array.isArray(value)) return value.length;
-  }
-
-  if (Array.isArray(output.warnings)) {
-    return output.warnings.filter(warning => {
-      if (typeof warning === 'string') {
-        return /hr|confirmation/i.test(warning);
-      }
-
-      const item = asRecord(warning);
-      return (
-        item?.needsHrConfirmation === true ||
-        item?.needs_hr_confirmation === true ||
-        (typeof item?.type === 'string' &&
-          /hr|confirmation/i.test(item.type)) ||
-        (typeof item?.severity === 'string' &&
-          /hr|confirmation/i.test(item.severity))
-      );
-    }).length;
-  }
-
-  return 0;
-}

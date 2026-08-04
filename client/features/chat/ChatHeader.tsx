@@ -9,7 +9,7 @@ type ChatHeaderProps = {
 
 export function ChatHeader({ isBusy, onEndSession }: ChatHeaderProps) {
   return (
-    <header className="sticky top-0 flex h-16 items-center justify-between border-b bg-background/90 px-4 backdrop-blur sm:h-[4.5rem] sm:px-8 lg:px-12">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background/90 px-4 backdrop-blur sm:h-[4.5rem] sm:px-8 lg:px-12">
       <a
         className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         href="#"

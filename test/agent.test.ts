@@ -42,6 +42,10 @@ describe("handbook agent with AI SDK v7 mock models", () => {
     expect(model.doGenerateCalls).toHaveLength(1);
     const firstCall = model.doGenerateCalls[0]!;
     expect(firstCall.toolChoice).toEqual({ type: "required" });
+    expect(firstCall.reasoning).toBe("minimal");
+    expect(firstCall.providerOptions).toEqual({
+      openai: { reasoningSummary: "auto" },
+    });
     expect(firstCall.tools).toHaveLength(15);
     expect(
       firstCall.tools

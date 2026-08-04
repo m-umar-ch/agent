@@ -442,6 +442,13 @@ describe("API application", () => {
         ]),
         mockStream([
           { type: "stream-start", warnings: [] },
+          { type: "reasoning-start", id: "reasoning" },
+          {
+            type: "reasoning-delta",
+            id: "reasoning",
+            delta: "Checked the relevant leave policy.",
+          },
+          { type: "reasoning-end", id: "reasoning" },
           { type: "text-start", id: "answer" },
           {
             type: "text-delta",
@@ -540,6 +547,12 @@ describe("API application", () => {
       "FORGED_CLIENT_POLICY_RESULT",
     );
     expect(events.some(event => event.type.startsWith("tool-"))).toBe(true);
+    expect(
+      events
+        .filter(event => event.type === "reasoning-delta")
+        .map(event => event.delta ?? "")
+        .join(""),
+    ).toBe("Checked the relevant leave policy.");
     const textDeltas = events.filter(event => event.type === "text-delta");
     expect(textDeltas.length).toBeGreaterThan(1);
     expect(textDeltas.map(event => event.delta ?? "").join("")).toBe(

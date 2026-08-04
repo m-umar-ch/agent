@@ -1,11 +1,19 @@
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { RefreshCw } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ApiKeyGate } from './components/ApiKeyGate';
 import { Composer } from './components/Composer';
-import { Message } from './components/Message';
+import { Message, ProcessingMessage } from './components/Message';
 import { Button } from './components/ui/button';
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from './components/ui/message-scroller';
 import type { HandbookMessage } from './components/chat-types';
 import { ChatErrorAlert } from './features/chat/ChatErrorAlert';
 import { ChatHeader } from './features/chat/ChatHeader';
@@ -22,7 +30,6 @@ function ChatClient({
   onEndSession: () => void;
 }) {
   const [input, setInput] = useState('');
-  const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const transport = useMemo(
     () =>
       new DefaultChatTransport<HandbookMessage>({
@@ -51,13 +58,16 @@ function ChatClient({
   const isBusy = status === 'submitted' || status === 'streaming';
   const canRegenerate =
     visibleMessages.some(message => message.role === 'user') && !isBusy;
-
-  useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({
-      block: 'end',
-      behavior: status === 'streaming' ? 'auto' : 'smooth',
-    });
-  }, [messages.length, status]);
+  const latestMessage = visibleMessages.at(-1);
+  const hasAssistantProgress =
+    latestMessage?.role === 'assistant' &&
+    latestMessage.parts.some(
+      part =>
+        isToolUIPart(part) ||
+        ((part.type === 'text' || part.type === 'reasoning') &&
+          part.text.trim().length > 0),
+    );
+  const showProcessing = isBusy && !hasAssistantProgress;
 
   function submitQuestion(question = input) {
     const trimmed = question.trim();
@@ -67,7 +77,7 @@ function ChatClient({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <ChatHeader
         isBusy={isBusy}
         onEndSession={() => {
@@ -76,77 +86,85 @@ function ChatClient({
         }}
       />
 
-      <main className="mx-auto w-full max-w-[52.5rem] flex-1 px-4 pt-7 pb-5 sm:px-6 sm:pt-10">
+      <main className="min-h-0 flex-1">
         {visibleMessages.length === 0 ? (
-          <EmptyState disabled={isBusy} onSelect={submitQuestion} />
+          <div className="mx-auto w-full max-w-[52.5rem] px-4 pt-7 pb-5 sm:px-6 sm:pt-10">
+            <EmptyState disabled={isBusy} onSelect={submitQuestion} />
+          </div>
         ) : (
-          <section
-            className="flex flex-col gap-7 pt-1 pb-8 sm:gap-8"
-            aria-label="Conversation"
-            role="log"
-            aria-live="polite"
-            aria-relevant="additions text"
-            aria-busy={isBusy}
-          >
-            {visibleMessages.map((message, index) => (
-              <Message
-                key={message.id}
-                message={message}
-                active={
-                  isBusy &&
-                  message.role === 'assistant' &&
-                  index === visibleMessages.length - 1
-                }
-              />
-            ))}
-
-            {status === 'submitted' && (
-              <div className="flex items-center gap-2.5 sm:gap-3.5" role="status">
-                <span
-                  className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground sm:size-9"
-                  aria-hidden="true"
+          <MessageScrollerProvider autoScroll defaultScrollPosition="end">
+            <MessageScroller>
+              <MessageScrollerViewport aria-label="Conversation">
+                <MessageScrollerContent
+                  className="mx-auto w-full max-w-[52.5rem] gap-7 px-4 pt-8 pb-8 sm:gap-8 sm:px-6 sm:pt-10"
+                  aria-busy={isBusy}
+                  aria-live="polite"
+                  aria-relevant="additions text"
+                  role="log"
                 >
-                  S
-                </span>
-                <span
-                  className="flex h-9 items-center gap-1 rounded-xl border bg-card px-3"
-                  aria-label="Preparing an answer"
-                >
-                  <i className="size-1.5 animate-bounce rounded-full bg-primary/60" />
-                  <i className="size-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:120ms]" />
-                  <i className="size-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:240ms]" />
-                </span>
-              </div>
-            )}
+                  {visibleMessages.map((message, index) => (
+                    <MessageScrollerItem
+                      key={message.id}
+                      messageId={message.id}
+                      scrollAnchor={message.role === 'user'}
+                    >
+                      <Message
+                        message={message}
+                        active={
+                          isBusy &&
+                          message.role === 'assistant' &&
+                          index === visibleMessages.length - 1
+                        }
+                      />
+                    </MessageScrollerItem>
+                  ))}
 
-            {error && (
-              <ChatErrorAlert
-                canRetry={canRegenerate}
-                error={error}
-                onDismiss={clearError}
-                onRetry={() => void regenerate()}
-              />
-            )}
+                  {showProcessing && (
+                    <MessageScrollerItem
+                      messageId={`processing-${latestMessage?.id ?? 'new'}`}
+                    >
+                      <ProcessingMessage />
+                    </MessageScrollerItem>
+                  )}
 
-            {canRegenerate && !error && (
-              <div className="-mt-2 flex justify-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => void regenerate()}
-                >
-                  <RefreshCw data-icon="inline-start" aria-hidden="true" />
-                  Regenerate answer
-                </Button>
-              </div>
-            )}
-            <div ref={endOfMessagesRef} />
-          </section>
+                  {error && (
+                    <MessageScrollerItem messageId="chat-error">
+                      <ChatErrorAlert
+                        canRetry={canRegenerate}
+                        error={error}
+                        onDismiss={clearError}
+                        onRetry={() => void regenerate()}
+                      />
+                    </MessageScrollerItem>
+                  )}
+
+                  {canRegenerate && !error && (
+                    <MessageScrollerItem messageId="regenerate-answer">
+                      <div className="flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => void regenerate()}
+                        >
+                          <RefreshCw
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                          />
+                          Regenerate answer
+                        </Button>
+                      </div>
+                    </MessageScrollerItem>
+                  )}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          </MessageScrollerProvider>
         )}
       </main>
 
-      <footer className="sticky bottom-0 z-10 bg-[linear-gradient(to_bottom,transparent,oklch(0.975_0.008_92/0.95)_22%,oklch(0.975_0.008_92)_55%)] px-2.5 pt-2 pb-2.5 sm:px-5 sm:pb-4">
+      <footer className="shrink-0 border-t bg-background px-2.5 pt-2 pb-2.5 sm:px-5 sm:pb-4">
         <div className="mx-auto w-full max-w-[49.5rem]">
           <div
             className="flex min-h-5 items-center gap-2 px-1.5 text-[0.7rem] text-muted-foreground"

@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ActivityTimeline } from "../client/components/ActivityTimeline";
+import { ToolActivity } from "../client/components/ActivityTimeline";
 import { getChatErrorCopy } from "../client/features/chat/ChatErrorAlert";
 import {
   getFriendlyToolName,
-  getHrWarningCount,
   getToolStatus,
   type HandbookToolPart,
 } from "../client/components/chat-types";
@@ -77,31 +76,7 @@ describe("client handbook activity utilities", () => {
     );
   });
 
-  test("counts nested output.hr.flags only for completed tool output", () => {
-    const flags = [{ id: "one" }, { id: "two" }, { id: "three" }];
-    expect(
-      getHrWarningCount(
-        toolPart("output-available", { output: { hr: { flagCount: 4 } } }),
-      ),
-    ).toBe(4);
-    expect(
-      getHrWarningCount(
-        toolPart("output-available", { output: { hr: { flags } } }),
-      ),
-    ).toBe(3);
-    expect(
-      getHrWarningCount(
-        toolPart("input-available", { output: { hr: { flags } } }),
-      ),
-    ).toBe(0);
-    expect(
-      getHrWarningCount(
-        toolPart("output-available", { output: { hr: { flags: "invalid" } } }),
-      ),
-    ).toBe(0);
-  });
-
-  test("statically renders nested HR warnings without a DOM environment", () => {
+  test("statically renders a compact tool status without tool output details", () => {
     expect(globalThis.document).toBeUndefined();
     const part = toolPart("output-available", {
       output: {
@@ -111,17 +86,12 @@ describe("client handbook activity utilities", () => {
     });
 
     const html = renderToStaticMarkup(
-      createElement(ActivityTimeline, {
-        parts: [part],
-        active: false,
-      }),
+      createElement(ToolActivity, { part }),
     );
 
-    expect(html).toContain("Handbook activity");
-    expect(html).toContain("1 source");
     expect(html).toContain("Leave policy");
     expect(html).toContain("Reviewed");
-    expect(html).toContain("2 need HR");
-    expect(html).toContain("2 items need HR confirmation");
+    expect(html).not.toContain("HR confirmation");
+    expect(html).not.toContain("2 items");
   });
 });
