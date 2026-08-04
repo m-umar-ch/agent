@@ -1,5 +1,8 @@
 /** @jsxImportSource react */
+import { Send, Square } from 'lucide-react';
 import type { FormEvent, KeyboardEvent } from 'react';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 
 type ComposerProps = {
   input: string;
@@ -36,11 +39,14 @@ export function Composer({
   }
 
   return (
-    <form className="composer" onSubmit={handleSubmit}>
+    <form
+      className="rounded-2xl border bg-card px-3 pt-2.5 pb-2.5 shadow-[0_12px_36px_oklch(0.27_0.03_145/0.11)] transition-[border-color,box-shadow] focus-within:border-primary/55 focus-within:shadow-[0_0_0_4px_oklch(0.4_0.075_155/0.08),0_12px_36px_oklch(0.27_0.03_145/0.11)] sm:px-4"
+      onSubmit={handleSubmit}
+    >
       <label className="sr-only" htmlFor="handbook-question">
         Ask a handbook question
       </label>
-      <textarea
+      <Textarea
         id="handbook-question"
         value={input}
         onChange={event => onInputChange(event.target.value)}
@@ -48,24 +54,37 @@ export function Composer({
         placeholder="Ask about leave, benefits, attendance, conduct…"
         rows={1}
         aria-describedby="composer-help"
+        className="max-h-40 min-h-9 resize-y border-0 bg-transparent px-0.5 py-1 text-[0.95rem] leading-6 shadow-none focus-visible:border-transparent focus-visible:ring-0"
       />
-      <div className="composer__footer">
-        <span id="composer-help">Enter to send · Shift + Enter for a new line</span>
+      <div className="mt-1 flex items-center justify-end gap-3 sm:justify-between">
+        <span
+          id="composer-help"
+          className="hidden text-[0.65rem] text-muted-foreground/75 sm:inline"
+        >
+          Enter to send · Shift + Enter for a new line
+        </span>
         {isBusy ? (
-          <button className="composer__button composer__button--stop" type="button" onClick={onStop}>
-            <span className="stop-icon" aria-hidden="true" />
+          <Button
+            variant="secondary"
+            size="sm"
+            type="button"
+            onClick={onStop}
+            className="rounded-lg bg-orange-100 text-orange-900 hover:bg-orange-200"
+          >
+            <Square className="size-3 fill-current" aria-hidden="true" />
             Stop
-          </button>
+          </Button>
         ) : (
-          <button
-            className="composer__button"
+          <Button
+            size="sm"
             type="submit"
             disabled={!canSend}
             aria-label="Send question"
+            className="rounded-lg px-3"
           >
-            <span>Send</span>
-            <span aria-hidden="true">↑</span>
-          </button>
+            Send
+            <Send aria-hidden="true" />
+          </Button>
         )}
       </div>
     </form>

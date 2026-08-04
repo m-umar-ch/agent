@@ -1,6 +1,6 @@
+import { createOpenAI } from "@ai-sdk/openai";
 import {
   ToolLoopAgent,
-  createGateway,
   isStepCount,
   type InferAgentUIMessage,
   type LanguageModel,
@@ -36,7 +36,7 @@ export function getHandbookAgent(): HandbookAgent {
   }
 
   const env = getEnv();
-  const gateway = createGateway({ apiKey: env.aiGatewayApiKey });
-  cachedAgent = createHandbookAgent(gateway(env.aiModel));
+  const openai = createOpenAI({ apiKey: env.openaiApiKey });
+  cachedAgent = createHandbookAgent(openai(env.openaiModel ?? "gpt-5-mini"));
   return cachedAgent;
 }

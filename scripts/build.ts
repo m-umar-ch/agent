@@ -1,3 +1,4 @@
+import tailwind from "bun-plugin-tailwind";
 import { rename, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -10,6 +11,7 @@ const client = await Bun.build({
   target: "browser",
   minify: true,
   splitting: true,
+  plugins: [tailwind],
   publicPath: "/",
   naming: {
     entry: "[name]-[hash].[ext]",

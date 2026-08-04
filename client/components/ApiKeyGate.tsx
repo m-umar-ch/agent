@@ -1,5 +1,9 @@
 /** @jsxImportSource react */
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader } from './ui/card';
+import { Input } from './ui/input';
 
 type ApiKeyGateProps = {
   onUnlock: (apiKey: string) => void;
@@ -15,47 +19,79 @@ export function ApiKeyGate({ onUnlock }: ApiKeyGateProps) {
   }
 
   return (
-    <main className="key-gate">
-      <section className="key-card" aria-labelledby="key-gate-title">
-        <div className="brand-mark brand-mark--large" aria-hidden="true">
-          S
-        </div>
-        <p className="eyebrow">STAUNCH PEOPLE</p>
-        <h1 id="key-gate-title">Your handbook, made easier</h1>
-        <p className="key-card__intro">
-          Ask clear, private questions about company policies and get grounded
-          answers from the employee handbook.
-        </p>
-
-        <form onSubmit={handleSubmit} className="key-form">
-          <label htmlFor="api-key">API key</label>
-          <div className="key-input-row">
-            <input
-              id="api-key"
-              name="handbook-session-key"
-              type="password"
-              value={draftKey}
-              onChange={event => setDraftKey(event.target.value)}
-              placeholder="Enter your API key"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              autoFocus
-              required
-            />
-            <button type="submit" disabled={!draftKey.trim()}>
-              Continue
-              <span aria-hidden="true">→</span>
-            </button>
+    <main className="grid min-h-dvh place-items-center overflow-hidden bg-[radial-gradient(circle_at_15%_20%,oklch(0.72_0.06_145/0.2),transparent_34%),radial-gradient(circle_at_85%_76%,oklch(0.72_0.08_75/0.14),transparent_28%)] px-4 py-8 sm:px-6">
+      <Card
+        className="w-full max-w-xl gap-0 rounded-3xl border-primary/15 bg-card/95 py-0 text-center shadow-[0_20px_60px_oklch(0.27_0.04_145/0.1)] backdrop-blur"
+        aria-labelledby="key-gate-title"
+      >
+        <CardHeader className="items-center gap-0 px-6 pt-9 pb-0 sm:px-12 sm:pt-12">
+          <div
+            className="mb-5 grid size-14 place-items-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-lg shadow-primary/20"
+            aria-hidden="true"
+          >
+            S
           </div>
-        </form>
+          <p className="mb-3 text-[0.7rem] font-bold tracking-[0.16em] text-primary">
+            STAUNCH PEOPLE
+          </p>
+          <h1
+            id="key-gate-title"
+            className="text-3xl leading-tight font-semibold tracking-[-0.035em] text-balance text-foreground sm:text-4xl"
+          >
+            Your handbook, made easier
+          </h1>
+          <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            Ask clear, private questions about company policies and get grounded
+            answers from the employee handbook.
+          </p>
+        </CardHeader>
 
-        <p className="key-card__privacy">
-          <span aria-hidden="true">◇</span>
-          Your key stays in this tab’s memory only and is cleared when you
-          leave or end the session.
-        </p>
-      </section>
+        <CardContent className="px-6 pt-7 pb-9 sm:px-12 sm:pt-8 sm:pb-12">
+          <form onSubmit={handleSubmit} className="text-left">
+            <label
+              htmlFor="api-key"
+              className="mb-2 ml-0.5 block text-sm font-semibold"
+            >
+              Handbook access key
+            </label>
+            <div className="flex flex-col gap-2.5 sm:flex-row">
+              <Input
+                id="api-key"
+                name="handbook-session-key"
+                type="password"
+                value={draftKey}
+                onChange={event => setDraftKey(event.target.value)}
+                placeholder="Enter your handbook access key"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                autoFocus
+                required
+                className="h-12 rounded-xl bg-background px-4"
+              />
+              <Button
+                type="submit"
+                disabled={!draftKey.trim()}
+                className="h-12 rounded-xl px-5 font-semibold"
+              >
+                Continue
+                <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          </form>
+
+          <p className="mt-5 flex items-start justify-center gap-2 text-xs leading-5 text-muted-foreground">
+            <ShieldCheck
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <span>
+              Your key stays in this tab’s memory only and is cleared when you
+              leave or end the session.
+            </span>
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

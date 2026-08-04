@@ -4,14 +4,8 @@ const positiveInteger = (defaultValue: number) =>
   z.coerce.number().int().positive().default(defaultValue);
 
 const envSchema = z.object({
-  AI_GATEWAY_API_KEY: z.string().trim().min(1),
-  AI_MODEL: z
-    .string()
-    .trim()
-    .regex(
-      /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/i,
-      "AI_MODEL must use the provider/model format.",
-    ),
+  OPENAI_API_KEY: z.string().trim().min(1),
+  OPENAI_MODEL: z.string().trim().min(1).max(200).default("gpt-5-mini"),
   HANDBOOK_API_KEY: z.string().min(24),
   PORT: positiveInteger(3000).pipe(z.number().max(65_535)),
   MAX_REQUEST_BYTES: positiveInteger(262_144),
@@ -22,8 +16,8 @@ const envSchema = z.object({
 });
 
 export type AppEnv = Readonly<{
-  aiGatewayApiKey: string;
-  aiModel: string;
+  openaiApiKey: string;
+  openaiModel: string;
   handbookApiKey: string;
   port: number;
   maxRequestBytes: number;
@@ -44,8 +38,8 @@ export function parseEnv(
   }
 
   return Object.freeze({
-    aiGatewayApiKey: parsed.data.AI_GATEWAY_API_KEY,
-    aiModel: parsed.data.AI_MODEL,
+    openaiApiKey: parsed.data.OPENAI_API_KEY,
+    openaiModel: parsed.data.OPENAI_MODEL,
     handbookApiKey: parsed.data.HANDBOOK_API_KEY,
     port: parsed.data.PORT,
     maxRequestBytes: parsed.data.MAX_REQUEST_BYTES,

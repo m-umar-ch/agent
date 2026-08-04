@@ -13,8 +13,8 @@ import { parseEnv, type AppEnv } from "../src/config/env";
 const API_KEY = "test-handbook-key-1234567890";
 
 const SAFE_ENV: AppEnv = Object.freeze({
-  aiGatewayApiKey: "not-used-in-tests",
-  aiModel: "test/mock-model",
+  openaiApiKey: "not-used-in-tests",
+  openaiModel: "gpt-test-model",
   handbookApiKey: API_KEY,
   port: 3000,
   maxRequestBytes: 1_024,
@@ -81,8 +81,7 @@ function appWithAgentGuard(env: AppEnv = SAFE_ENV) {
 describe("environment parsing", () => {
   test("parses required values, coercions, and safe defaults", () => {
     const env = parseEnv({
-      AI_GATEWAY_API_KEY: " gateway-test ",
-      AI_MODEL: "test/mock-model",
+      OPENAI_API_KEY: " openai-test ",
       HANDBOOK_API_KEY: API_KEY,
       NODE_ENV: "test",
       PORT: "4321",
@@ -90,8 +89,8 @@ describe("environment parsing", () => {
     });
 
     expect(env).toEqual({
-      aiGatewayApiKey: "gateway-test",
-      aiModel: "test/mock-model",
+      openaiApiKey: "openai-test",
+      openaiModel: "gpt-5-mini",
       handbookApiKey: API_KEY,
       port: 4321,
       maxRequestBytes: 262_144,
@@ -105,15 +104,15 @@ describe("environment parsing", () => {
 
   test("rejects missing secrets, malformed models, and invalid limits", () => {
     const valid = {
-      AI_GATEWAY_API_KEY: "gateway-test",
-      AI_MODEL: "test/mock-model",
+      OPENAI_API_KEY: "openai-test",
+      OPENAI_MODEL: "gpt-test-model",
       HANDBOOK_API_KEY: API_KEY,
       NODE_ENV: "test",
     };
 
     for (const invalid of [
-      { ...valid, AI_GATEWAY_API_KEY: "" },
-      { ...valid, AI_MODEL: "missing-provider" },
+      { ...valid, OPENAI_API_KEY: "" },
+      { ...valid, OPENAI_MODEL: "" },
       { ...valid, HANDBOOK_API_KEY: "too-short" },
       { ...valid, PORT: "65536" },
       { ...valid, MAX_REQUEST_BYTES: "0" },

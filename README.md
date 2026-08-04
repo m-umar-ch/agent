@@ -11,10 +11,12 @@ before answering.
   production server and browser assets.
 - **Hono** provides `/api/health`, bearer-key authentication, bounded
   process-wide rate limiting, request limits, and the handbook chat route.
-- **React 19** and `@ai-sdk/react` provide the in-browser chat experience using
-  `useChat` and `DefaultChatTransport`.
-- **AI SDK v7** provides the AI Gateway model, `ToolLoopAgent`, typed UI
-  messages, server-side tool execution, and the UI message stream.
+- **React 19**, **Tailwind CSS v4**, and **shadcn/ui** provide the responsive
+  browser experience; `@ai-sdk/react` supplies `useChat` and
+  `DefaultChatTransport`.
+- **AI SDK v7** and `@ai-sdk/openai` connect directly to OpenAI, provide the
+  `ToolLoopAgent`, typed UI messages, server-side tool execution, and the UI
+  message stream.
 - **15 server-side tools** cover employment, focus hours, conduct and safety,
   work-management systems, appraisal, benefits, leave, attendance, remote
   work, EOBI, night work, offboarding, and three department role families.
@@ -27,7 +29,7 @@ remain on the server.
 ## Prerequisites
 
 - [Bun](https://bun.sh/) compatible with this repository's lockfile
-- A [Vercel AI Gateway](https://vercel.com/ai-gateway) API key
+- An [OpenAI API key](https://platform.openai.com/api-keys)
 - A long, random internal key to protect the handbook endpoint
 
 Install dependencies:
@@ -46,8 +48,8 @@ cp .env.example .env
 
 Environment variables:
 
-- `AI_GATEWAY_API_KEY`: AI Gateway credential used only by the server.
-- `AI_MODEL`: an AI Gateway model ID in `provider/model` form.
+- `OPENAI_API_KEY`: OpenAI credential used only by the server.
+- `OPENAI_MODEL`: OpenAI GPT model ID. It defaults to `gpt-5-mini`.
 - `HANDBOOK_API_KEY`: shared bearer key for the employee UI and API; it must be
   at least 24 characters.
 - `PORT`: HTTP port, default `3000`.
@@ -60,11 +62,10 @@ Environment variables:
 - `DB_FILE_NAME`: database filename used by the repository's database tooling.
   The handbook chat runtime does not currently persist conversations to it.
 
-Do not copy a model name from an old example. Open the live
-[AI Gateway model catalog](https://vercel.com/ai-gateway/models), choose a
-currently available model that supports tool calling, and place its exact
-`provider/model` ID in `AI_MODEL`. Availability and model IDs change over time,
-so this README intentionally does not hardcode one.
+Choose a currently available OpenAI model that supports tool calling and place
+its exact ID in `OPENAI_MODEL`. The checked-in default follows the current
+`@ai-sdk/openai` provider example, but model availability and account access can
+change over time.
 
 ## Run and verify
 
@@ -76,7 +77,7 @@ bun run build      # production build in dist/
 bun run start      # run dist/server.js with NODE_ENV=production
 bun run typecheck  # TypeScript checks without emitting files
 bun run test       # Bun test suite
-bun run smoke:live # opt-in live Gateway/API smoke test
+bun run smoke:live # opt-in live OpenAI/API smoke test
 bun run check      # typecheck, test, then build
 ```
 
@@ -90,11 +91,10 @@ directory.
 
 ## API-key UI flow
 
-The initial screen asks for `HANDBOOK_API_KEY`. The browser keeps the entered
-value only in React state, sends it as `Authorization: Bearer ...` on each chat
-request, and clears it on page reload, tab close, or **End session**. The gate
-only checks that the field is non-empty; the server authenticates the first and
-every subsequent request.
+The initial screen asks for the internal `HANDBOOK_API_KEY` access key—not the
+OpenAI key. The browser keeps it only in React state, sends it as
+`Authorization: Bearer ...` on each chat request, and clears it on page reload,
+tab close, or **End session**. `OPENAI_API_KEY` always remains server-side.
 
 This is one shared application key, not user authentication. It provides no
 employee identity, per-user authorization, revocation, or reliable user audit
@@ -198,8 +198,8 @@ also reports how many items from a reviewed policy need confirmation.
 - The agent object, handbook document cache, and rate-limit counters live only
   in server-process memory and reset when the process restarts.
 - Questions, conversation context, and policy material needed to answer them
-  are processed through AI Gateway and the selected upstream model provider.
-  Review those services' retention and data-processing terms before deployment.
+  are sent directly to OpenAI using the selected model. Review OpenAI's
+  retention and data-processing terms before deployment.
 - Server logs contain operational metadata such as request IDs, tool names,
   timing, finish reasons, and token usage. The UI receives tool stream parts
   with compact source and HR-warning metadata, not raw policy bodies.
