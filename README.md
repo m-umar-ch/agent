@@ -7,13 +7,13 @@ before answering.
 
 ## Architecture
 
-- **Bun** runs the application, serves the React entry point, and builds the
-  production server and browser assets.
+- **Bun** runs the Hono API and production server; **Vite** develops and builds
+  the React browser client.
 - **Hono** provides `/api/health`, bearer-key authentication, bounded
   process-wide rate limiting, request limits, and the handbook chat route.
-- **React 19**, **Tailwind CSS v4**, and **shadcn/ui** provide the responsive
-  browser experience; `@ai-sdk/react` supplies `useChat` and
-  `DefaultChatTransport`.
+- **React 19** with **React Compiler**, **Tailwind CSS v4**, and **shadcn/ui**
+  provide the responsive browser experience; `@ai-sdk/react` supplies
+  `useChat` and `DefaultChatTransport`.
 - **AI SDK v7** and `@ai-sdk/openai` connect directly to OpenAI, provide the
   `ToolLoopAgent`, typed UI messages, server-side tool execution, and the UI
   message stream.
@@ -72,8 +72,9 @@ change over time.
 The following application commands are defined in `package.json`:
 
 ```sh
-bun run dev        # hot-reloading development server
-bun run build      # production build in dist/
+bun run dev:api    # Bun/Hono API server at http://localhost:3000
+bun run dev        # Vite client, with /api proxied to the API server
+bun run build      # Vite client and Bun production server build in dist/
 bun run start      # run dist/server.js with NODE_ENV=production
 bun run typecheck  # TypeScript checks without emitting files
 bun run test       # Bun test suite
@@ -81,7 +82,9 @@ bun run smoke:live # opt-in live OpenAI/API smoke test
 bun run check      # typecheck, test, then build
 ```
 
-Open <http://localhost:3000> after starting the server.
+For development, start `bun run dev:api` and `bun run dev` in separate
+terminals, then open the Vite URL printed by the latter. For production, run
+`bun run build`, then `bun run start` and open <http://localhost:3000>.
 
 The production build artifact is `dist/`, with `dist/server.js` as its server
 entry point and hashed browser assets under `dist/client/`. The artifact is not
@@ -92,9 +95,10 @@ directory.
 ## API-key UI flow
 
 The initial screen asks for the internal `HANDBOOK_API_KEY` access key—not the
-OpenAI key. The browser keeps it only in React state, sends it as
-`Authorization: Bearer ...` on each chat request, and clears it on page reload,
-tab close, or **End session**. `OPENAI_API_KEY` always remains server-side.
+OpenAI key. The browser keeps it in per-tab `sessionStorage`, sends it as
+`Authorization: Bearer ...` on each chat request, and clears it when the tab
+closes or the user chooses **End session**. `OPENAI_API_KEY` always remains
+server-side.
 
 This is one shared application key, not user authentication. It provides no
 employee identity, per-user authorization, revocation, or reliable user audit

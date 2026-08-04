@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { ChevronDown, Sparkles, TriangleAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {

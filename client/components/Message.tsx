@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { isToolUIPart, type UIMessagePart } from 'ai';
 import { ExternalLink, FileText, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';

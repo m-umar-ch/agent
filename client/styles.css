@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -20,6 +21,7 @@
   --accent: oklch(0.91 0.029 147);
   --accent-foreground: oklch(0.31 0.05 153);
   --destructive: oklch(0.575 0.205 28);
+  --destructive-foreground: oklch(0.985 0.006 145);
   --border: oklch(0.875 0.014 110);
   --input: oklch(0.845 0.017 125);
   --ring: oklch(0.49 0.075 155);
@@ -54,6 +56,7 @@
   --accent: oklch(0.33 0.04 150);
   --accent-foreground: oklch(0.96 0.01 110);
   --destructive: oklch(0.69 0.18 25);
+  --destructive-foreground: oklch(0.215 0.025 150);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.68 0.065 150);
@@ -89,6 +92,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -127,5 +131,10 @@
 
   body {
     @apply min-w-80 bg-background font-sans text-foreground antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }

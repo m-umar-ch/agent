@@ -22,7 +22,8 @@
     "client/**/*.ts",
     "client/**/*.tsx",
     "scripts/**/*.ts",
-    "test/**/*.ts"
+    "test/**/*.ts",
+    "vite.config.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }

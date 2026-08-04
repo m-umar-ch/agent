@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { Send, Square } from 'lucide-react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Button } from './ui/button';
@@ -65,13 +64,12 @@ export function Composer({
         </span>
         {isBusy ? (
           <Button
-            variant="secondary"
+            variant="destructive"
             size="sm"
             type="button"
             onClick={onStop}
-            className="rounded-lg bg-orange-100 text-orange-900 hover:bg-orange-200"
           >
-            <Square className="size-3 fill-current" aria-hidden="true" />
+            <Square data-icon="inline-start" className="fill-current" aria-hidden="true" />
             Stop
           </Button>
         ) : (
@@ -83,7 +81,7 @@ export function Composer({
             className="rounded-lg px-3"
           >
             Send
-            <Send aria-hidden="true" />
+            <Send data-icon="inline-end" aria-hidden="true" />
           </Button>
         )}
       </div>

@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Button } from './ui/button';
@@ -75,14 +74,15 @@ export function ApiKeyGate({ onUnlock }: ApiKeyGateProps) {
                 className="h-12 rounded-xl px-5 font-semibold"
               >
                 Continue
-                <ArrowRight aria-hidden="true" />
+                <ArrowRight data-icon="inline-end" aria-hidden="true" />
               </Button>
             </div>
           </form>
 
           <p className="mt-5 flex items-start justify-center gap-2 text-xs leading-5 text-muted-foreground">
             <ShieldCheck
-              className="mt-0.5 size-4 shrink-0 text-primary"
+              className="mt-0.5 shrink-0 text-primary"
+              data-icon="inline-start"
               aria-hidden="true"
             />
             <span>
