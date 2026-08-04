@@ -10,6 +10,8 @@ const envSchema = z.object({
   PORT: positiveInteger(3000).pipe(z.number().max(65_535)),
   MAX_REQUEST_BYTES: positiveInteger(262_144),
   MAX_CHAT_MESSAGES: positiveInteger(30),
+  MAX_MESSAGE_TEXT_CHARS: positiveInteger(12_000),
+  MAX_CHAT_TEXT_CHARS: positiveInteger(36_000),
   RATE_LIMIT_PER_MINUTE: positiveInteger(30),
   AGENT_TIMEOUT_MS: positiveInteger(60_000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -22,6 +24,8 @@ export type AppEnv = Readonly<{
   port: number;
   maxRequestBytes: number;
   maxChatMessages: number;
+  maxMessageTextChars: number;
+  maxChatTextChars: number;
   rateLimitPerMinute: number;
   agentTimeoutMs: number;
   nodeEnv: "development" | "test" | "production";
@@ -44,6 +48,8 @@ export function parseEnv(
     port: parsed.data.PORT,
     maxRequestBytes: parsed.data.MAX_REQUEST_BYTES,
     maxChatMessages: parsed.data.MAX_CHAT_MESSAGES,
+    maxMessageTextChars: parsed.data.MAX_MESSAGE_TEXT_CHARS,
+    maxChatTextChars: parsed.data.MAX_CHAT_TEXT_CHARS,
     rateLimitPerMinute: parsed.data.RATE_LIMIT_PER_MINUTE,
     agentTimeoutMs: parsed.data.AGENT_TIMEOUT_MS,
     nodeEnv: parsed.data.NODE_ENV,

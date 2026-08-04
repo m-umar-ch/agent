@@ -55,6 +55,9 @@ Environment variables:
 - `PORT`: HTTP port, default `3000`.
 - `MAX_REQUEST_BYTES`: maximum chat request size, default `262144`.
 - `MAX_CHAT_MESSAGES`: maximum UI messages per request, default `30`.
+- `MAX_MESSAGE_TEXT_CHARS`: maximum text in one employee message, default `12000`.
+- `MAX_CHAT_TEXT_CHARS`: maximum cumulative employee text in one request, default
+  `36000`.
 - `RATE_LIMIT_PER_MINUTE`: process-wide request limit per server instance,
   default `30`.
 - `AGENT_TIMEOUT_MS`: total agent timeout, default `60000`.
@@ -102,8 +105,10 @@ server-side.
 
 This is one shared application key, not user authentication. It provides no
 employee identity, per-user authorization, revocation, or reliable user audit
-trail. For a real internal deployment, put the app behind TLS and company SSO
-(or replace the shared-key middleware with identity-aware authentication).
+trail. Do not deploy a placeholder or memorable value; generate and rotate a
+cryptographically random key. For a real internal deployment, put the app
+behind TLS and company SSO (or replace the shared-key middleware with
+identity-aware authentication).
 
 ## HTTP API
 
@@ -168,6 +173,8 @@ For each stateless turn, the browser sends its current UI-message history. The
 server validates the full payload, then forwards only employee-authored text
 messages to the model. Client-supplied system, assistant, and tool results are
 never trusted as policy evidence; the agent reloads policy tools on every turn.
+The server rejects a message over `MAX_MESSAGE_TEXT_CHARS` or a conversation
+over `MAX_CHAT_TEXT_CHARS` before invoking the model.
 
 ## Live smoke test (explicit opt-in)
 

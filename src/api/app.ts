@@ -23,6 +23,7 @@ export function createApiApp(options: {
     context.header("X-Content-Type-Options", "nosniff");
     context.header("X-Frame-Options", "DENY");
     context.header("Referrer-Policy", "no-referrer");
+    context.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
     await next();
   });
 

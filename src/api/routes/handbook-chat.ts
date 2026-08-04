@@ -63,11 +63,18 @@ async function readRequestBody(
 }
 
 class UnsafeMessageHistoryError extends Error {}
+class MessageTextTooLongError extends Error {}
+class ChatTextTooLongError extends Error {}
 
 function userOnlyHistory(
   messages: readonly HandbookUIMessage[],
+  limits: {
+    maxMessageTextChars: number;
+    maxChatTextChars: number;
+  },
 ): HandbookUIMessage[] {
   const sanitized: HandbookUIMessage[] = [];
+  let totalTextChars = 0;
 
   for (const message of messages) {
     if (message.role === "system") {
@@ -87,6 +94,18 @@ function userOnlyHistory(
     );
     if (parts.length === 0) {
       throw new UnsafeMessageHistoryError();
+    }
+
+    const messageTextChars = parts.reduce(
+      (total, part) => total + part.text.length,
+      0,
+    );
+    if (messageTextChars > limits.maxMessageTextChars) {
+      throw new MessageTextTooLongError();
+    }
+    totalTextChars += messageTextChars;
+    if (totalTextChars > limits.maxChatTextChars) {
+      throw new ChatTextTooLongError();
     }
 
     sanitized.push({
@@ -197,13 +216,25 @@ export function createHandbookChatHandler(options: {
 
     let uiMessages: HandbookUIMessage[];
     try {
-      uiMessages = userOnlyHistory(validated.data);
-    } catch {
+      uiMessages = userOnlyHistory(validated.data, options.env);
+    } catch (error) {
+      const errorCode =
+        error instanceof MessageTextTooLongError
+          ? "message_text_too_large"
+          : error instanceof ChatTextTooLongError
+            ? "chat_text_too_large"
+            : "unsafe_message_history";
+      const message =
+        errorCode === "message_text_too_large"
+          ? `Each employee message may contain at most ${options.env.maxMessageTextChars} characters.`
+          : errorCode === "chat_text_too_large"
+            ? `A chat may contain at most ${options.env.maxChatTextChars} characters of employee text.`
+            : "Only employee text messages are accepted as conversation history.";
       return errorResponse(
         context,
-        400,
-        "unsafe_message_history",
-        "Only employee text messages are accepted as conversation history.",
+        errorCode === "unsafe_message_history" ? 400 : 413,
+        errorCode,
+        message,
         requestId,
       );
     }

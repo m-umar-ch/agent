@@ -122,6 +122,7 @@ function ChatClient({
             {error && (
               <ChatErrorAlert
                 canRetry={canRegenerate}
+                error={error}
                 onDismiss={clearError}
                 onRetry={() => void regenerate()}
               />

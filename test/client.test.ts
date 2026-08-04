@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ActivityTimeline } from "../client/components/ActivityTimeline";
+import { getChatErrorCopy } from "../client/features/chat/ChatErrorAlert";
 import {
   getFriendlyToolName,
   getHrWarningCount,
@@ -22,6 +23,21 @@ function toolPart(
 }
 
 describe("client handbook activity utilities", () => {
+  test("gives employees actionable HTTP error guidance", () => {
+    expect(getChatErrorCopy(new Error("HTTP 401 unauthorized"))).toContain(
+      "access key was rejected",
+    );
+    expect(getChatErrorCopy(new Error("HTTP 429 rate_limit_exceeded"))).toContain(
+      "Too many requests",
+    );
+    expect(getChatErrorCopy(new Error("HTTP 413 request_too_large"))).toContain(
+      "too long",
+    );
+    expect(getChatErrorCopy(new Error("request timeout"))).toContain(
+      "took too long",
+    );
+  });
+
   test("maps AI SDK tool states to stable employee-facing statuses", () => {
     expect(getToolStatus(toolPart("input-streaming"))).toEqual({
       label: "Preparing",
