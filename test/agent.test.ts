@@ -43,8 +43,9 @@ describe("handbook agent with AI SDK v7 mock models", () => {
     const firstCall = model.doGenerateCalls[0]!;
     expect(firstCall.toolChoice).toEqual({ type: "required" });
     expect(firstCall.reasoning).toBe("minimal");
+    expect(firstCall.maxOutputTokens).toBe(700);
     expect(firstCall.providerOptions).toEqual({
-      openai: { reasoningSummary: "auto" },
+      openai: { reasoningSummary: null, textVerbosity: "low" },
     });
     expect(firstCall.tools).toHaveLength(15);
     expect(
@@ -67,6 +68,11 @@ describe("handbook agent with AI SDK v7 mock models", () => {
       "Do not request or repeat unnecessary personal",
     );
     expect(systemInstructions).toContain("salary, health, CNIC, client");
+    expect(systemInstructions).toContain("answer in 1-2 sentences");
+    expect(systemInstructions).toContain("Keep most answers under 120 words");
+    expect(systemInstructions).toContain(
+      "Do not append policy names, section headings, citations",
+    );
   });
 
   test("executes a handbook tool and feeds its result into the final answer step", async () => {

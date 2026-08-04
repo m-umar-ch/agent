@@ -15,9 +15,11 @@ export function createHandbookAgent(model: LanguageModel) {
     instructions: HANDBOOK_AGENT_INSTRUCTIONS,
     allowSystemInMessages: false,
     reasoning: "minimal",
+    maxOutputTokens: 700,
     providerOptions: {
       openai: {
-        reasoningSummary: "auto",
+        reasoningSummary: null,
+        textVerbosity: "low",
       },
     },
     tools: handbookTools,

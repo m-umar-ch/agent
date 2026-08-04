@@ -49,6 +49,7 @@ function ChatClient({
     stop,
     regenerate,
     clearError,
+    setMessages,
   } = useChat<HandbookMessage>({
     transport,
     throttle: 40,
@@ -79,7 +80,13 @@ function ChatClient({
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <ChatHeader
+        canClear={visibleMessages.length > 0 || error !== undefined}
         isBusy={isBusy}
+        onClear={() => {
+          setInput('');
+          clearError();
+          setMessages([]);
+        }}
         onEndSession={() => {
           void stop();
           onEndSession();

@@ -1,13 +1,20 @@
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 
 type ChatHeaderProps = {
+  canClear: boolean;
   isBusy: boolean;
+  onClear: () => void;
   onEndSession: () => void;
 };
 
-export function ChatHeader({ isBusy, onEndSession }: ChatHeaderProps) {
+export function ChatHeader({
+  canClear,
+  isBusy,
+  onClear,
+  onEndSession,
+}: ChatHeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background/90 px-4 backdrop-blur sm:h-[4.5rem] sm:px-8 lg:px-12">
       <a
@@ -38,6 +45,17 @@ export function ChatHeader({ isBusy, onEndSession }: ChatHeaderProps) {
           <ShieldCheck data-icon="inline-start" aria-hidden="true" />
           {isBusy ? "Working" : "Secure session"}
         </Badge>
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          aria-label="Clear chat"
+          disabled={!canClear || isBusy}
+          onClick={onClear}
+        >
+          <Trash2 data-icon="inline-start" aria-hidden="true" />
+          <span className="hidden sm:inline">Clear chat</span>
+        </Button>
         <Button
           variant="ghost"
           size="sm"
