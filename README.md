@@ -52,6 +52,9 @@ Environment variables:
 - `OPENAI_MODEL`: OpenAI GPT model ID. It defaults to `gpt-5-mini`.
 - `HANDBOOK_API_KEY`: shared bearer key for the employee UI and API; it must be
   at least 24 characters.
+- `HANDBOOK_HR_API_KEY`: separate bearer key for the HR-only topic-instructions
+  view and `/api/hr/*` routes; at least 24 characters and it must differ from
+  `HANDBOOK_API_KEY`.
 - `PORT`: HTTP port, default `3000`.
 - `MAX_REQUEST_BYTES`: maximum chat request size, default `262144`.
 - `MAX_CHAT_MESSAGES`: maximum UI messages per request, default `30`.
@@ -62,8 +65,11 @@ Environment variables:
   default `30`.
 - `AGENT_TIMEOUT_MS`: total agent timeout, default `60000`.
 - `NODE_ENV`: `development`, `test`, or `production`.
-- `DB_FILE_NAME`: database filename used by the repository's database tooling.
-  The handbook chat runtime does not currently persist conversations to it.
+- `DB_FILE_NAME`: SQLite database filename (default `db.sqlite`). It stores
+  HR-authored topic instructions; conversations are still not persisted.
+
+The database schema is applied automatically the first time the database is
+opened, and can also be applied explicitly with `bun run db:migrate`.
 
 Choose a currently available OpenAI model that supports tool calling and place
 its exact ID in `OPENAI_MODEL`. The checked-in default follows the current
@@ -191,6 +197,35 @@ bun run smoke:live
 It sends one valid UI-message question, verifies a successful SSE response and
 at least one JSON `data:` event, and prints neither the key nor response body.
 
+## HR topic instructions
+
+HR can maintain freeform guidance per handbook topic without a code change or
+redeploy. Open `/hr` (for example <http://localhost:3000/hr>) and unlock the
+view with `HANDBOOK_HR_API_KEY`; the employee key does not work there, and the
+HR key does not work on the employee chat route. The view lists all 15 catalog
+topics (EOBI policy, performance appraisal, and so on) with an editor to save
+or remove one instruction text per topic.
+
+Instructions are stored in the `topic_instructions` SQLite table keyed by tool
+name. When the agent calls a topic tool, the tool reads the stored instruction
+fresh from the database and appends it to the model payload as an
+`hrTopicInstructions` section alongside the unchanged policy content. The
+system prompt tells the agent that, within a tool result, HR-issued
+instructions take precedence over the policy document whenever they conflict,
+and to mention that HR has updated the guidance. HR instructions never
+override the agent's system instructions or safety rules.
+
+The HR routes are served under `/api/hr` behind the HR bearer key:
+
+- `GET /api/hr/topics` lists every topic with its title, summary, kind, and
+  current instruction (or `null`).
+- `PUT /api/hr/topics/:toolName` upserts `{ "content": "..." }` (at most 8000
+  characters).
+- `DELETE /api/hr/topics/:toolName` removes the instruction.
+
+Like the employee key, the HR key is one shared application key with no
+per-user identity or audit trail; generate a long random value and rotate it.
+
 ## HR confirmation behavior
 
 Handbook blockquotes beginning with
@@ -203,9 +238,9 @@ also reports how many items from a reviewed policy need confirmation.
 ## Data and privacy limits
 
 - Chat history is held by the current browser session and sent with each
-  request. There is no server-side conversation store, account history, or
-  database persistence. Only user-authored text is retained when the server
-  constructs model history.
+  request. There is no server-side conversation store or account history; the
+  SQLite database persists only HR-authored topic instructions. Only
+  user-authored text is retained when the server constructs model history.
 - The agent object, handbook document cache, and rate-limit counters live only
   in server-process memory and reset when the process restarts.
 - Questions, conversation context, and policy material needed to answer them

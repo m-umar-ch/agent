@@ -21,6 +21,7 @@ ui.use("*", async (context, next) => {
 });
 ui.use("*", serveStatic({ root: "./dist/client" }));
 ui.get("/", serveStatic({ root: "./dist/client", path: "index.html" }));
+ui.get("/hr", serveStatic({ root: "./dist/client", path: "index.html" }));
 
 const server = Bun.serve({
   port: env.port,

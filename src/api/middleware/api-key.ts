@@ -18,7 +18,13 @@ function bearerToken(value: string | undefined): string | null {
   return token.length > 0 ? token : null;
 }
 
-export function createApiKeyMiddleware(expectedApiKey: string) {
+export function createApiKeyMiddleware(
+  expectedApiKey: string,
+  options: { realm?: string; message?: string } = {},
+) {
+  const realm = options.realm ?? "handbook";
+  const message = options.message ?? "A valid handbook API key is required.";
+
   return createMiddleware<ApiContext>(async (context, next) => {
     const candidate = bearerToken(context.req.header("Authorization"));
     if (candidate === null || !apiKeysMatch(candidate, expectedApiKey)) {
@@ -28,13 +34,8 @@ export function createApiKeyMiddleware(expectedApiKey: string) {
           reason: candidate === null ? "missing_bearer" : "invalid_key",
         },
       });
-      context.header("WWW-Authenticate", 'Bearer realm="handbook"');
-      return errorResponse(
-        context,
-        401,
-        "unauthorized",
-        "A valid handbook API key is required.",
-      );
+      context.header("WWW-Authenticate", `Bearer realm="${realm}"`);
+      return errorResponse(context, 401, "unauthorized", message);
     }
 
     await next();

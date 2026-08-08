@@ -13,11 +13,14 @@ import {
   createRateLimitMiddleware,
 } from "./middleware/api-key";
 import { createHandbookChatHandler } from "./routes/handbook-chat";
+import { createHrTopicsRouter } from "./routes/hr-topics";
+import type { TopicInstructionStore } from "../handbook/instruction-store";
 
 export function createApiApp(options: {
   env?: AppEnv;
   getAgent?: () => HandbookAgent;
   drain?: DrainFn;
+  instructionStore?: TopicInstructionStore;
 } = {}) {
   const env = options.env ?? getEnv();
   const getAgent = options.getAgent ?? getHandbookAgent;
@@ -68,6 +71,20 @@ export function createApiApp(options: {
   app.post(
     "/api/handbook/chat",
     createHandbookChatHandler({ env, getAgent }),
+  );
+
+  app.use(
+    "/api/hr/*",
+    createApiKeyMiddleware(env.hrApiKey, {
+      realm: "handbook-hr",
+      message: "A valid HR API key is required.",
+    }),
+    createRateLimitMiddleware(env.rateLimitPerMinute),
+  );
+
+  app.route(
+    "/api/hr",
+    createHrTopicsRouter({ store: options.instructionStore }),
   );
 
   app.notFound(context =>

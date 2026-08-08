@@ -11,11 +11,13 @@ import { createApiApp } from "../src/api/app";
 import { parseEnv, type AppEnv } from "../src/config/env";
 
 const API_KEY = "test-handbook-key-1234567890";
+const HR_API_KEY = "test-handbook-hr-key-1234567890";
 
 const SAFE_ENV: AppEnv = Object.freeze({
   openaiApiKey: "not-used-in-tests",
   openaiModel: "gpt-test-model",
   handbookApiKey: API_KEY,
+  hrApiKey: HR_API_KEY,
   port: 3000,
   maxRequestBytes: 1_024,
   maxChatMessages: 2,
@@ -85,6 +87,7 @@ describe("environment parsing", () => {
     const env = parseEnv({
       OPENAI_API_KEY: " openai-test ",
       HANDBOOK_API_KEY: API_KEY,
+      HANDBOOK_HR_API_KEY: HR_API_KEY,
       NODE_ENV: "test",
       PORT: "4321",
       MAX_CHAT_MESSAGES: "7",
@@ -94,6 +97,7 @@ describe("environment parsing", () => {
       openaiApiKey: "openai-test",
       openaiModel: "gpt-5-mini",
       handbookApiKey: API_KEY,
+      hrApiKey: HR_API_KEY,
       port: 4321,
       maxRequestBytes: 262_144,
       maxChatMessages: 7,
@@ -111,6 +115,7 @@ describe("environment parsing", () => {
       OPENAI_API_KEY: "openai-test",
       OPENAI_MODEL: "gpt-test-model",
       HANDBOOK_API_KEY: API_KEY,
+      HANDBOOK_HR_API_KEY: HR_API_KEY,
       NODE_ENV: "test",
     };
 
@@ -118,6 +123,8 @@ describe("environment parsing", () => {
       { ...valid, OPENAI_API_KEY: "" },
       { ...valid, OPENAI_MODEL: "" },
       { ...valid, HANDBOOK_API_KEY: "too-short" },
+      { ...valid, HANDBOOK_HR_API_KEY: "too-short" },
+      { ...valid, HANDBOOK_HR_API_KEY: API_KEY },
       { ...valid, PORT: "65536" },
       { ...valid, MAX_REQUEST_BYTES: "0" },
       { ...valid, MAX_CHAT_MESSAGES: "-1" },

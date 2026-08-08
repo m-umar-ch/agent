@@ -3,24 +3,34 @@ import { z } from "zod";
 const positiveInteger = (defaultValue: number) =>
   z.coerce.number().int().positive().default(defaultValue);
 
-const envSchema = z.object({
-  OPENAI_API_KEY: z.string().trim().min(1),
-  OPENAI_MODEL: z.string().trim().min(1).max(200).default("gpt-5-mini"),
-  HANDBOOK_API_KEY: z.string().min(24),
-  PORT: positiveInteger(3000).pipe(z.number().max(65_535)),
-  MAX_REQUEST_BYTES: positiveInteger(262_144),
-  MAX_CHAT_MESSAGES: positiveInteger(30),
-  MAX_MESSAGE_TEXT_CHARS: positiveInteger(12_000),
-  MAX_CHAT_TEXT_CHARS: positiveInteger(36_000),
-  RATE_LIMIT_PER_MINUTE: positiveInteger(30),
-  AGENT_TIMEOUT_MS: positiveInteger(60_000),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-});
+const envSchema = z
+  .object({
+    OPENAI_API_KEY: z.string().trim().min(1),
+    OPENAI_MODEL: z.string().trim().min(1).max(200).default("gpt-5-mini"),
+    HANDBOOK_API_KEY: z.string().min(24),
+    HANDBOOK_HR_API_KEY: z.string().min(24),
+    PORT: positiveInteger(3000).pipe(z.number().max(65_535)),
+    MAX_REQUEST_BYTES: positiveInteger(262_144),
+    MAX_CHAT_MESSAGES: positiveInteger(30),
+    MAX_MESSAGE_TEXT_CHARS: positiveInteger(12_000),
+    MAX_CHAT_TEXT_CHARS: positiveInteger(36_000),
+    RATE_LIMIT_PER_MINUTE: positiveInteger(30),
+    AGENT_TIMEOUT_MS: positiveInteger(60_000),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+  })
+  .refine(values => values.HANDBOOK_HR_API_KEY !== values.HANDBOOK_API_KEY, {
+    message:
+      "HANDBOOK_HR_API_KEY must differ from HANDBOOK_API_KEY so employees cannot reach the HR view.",
+    path: ["HANDBOOK_HR_API_KEY"],
+  });
 
 export type AppEnv = Readonly<{
   openaiApiKey: string;
   openaiModel: string;
   handbookApiKey: string;
+  hrApiKey: string;
   port: number;
   maxRequestBytes: number;
   maxChatMessages: number;
@@ -45,6 +55,7 @@ export function parseEnv(
     openaiApiKey: parsed.data.OPENAI_API_KEY,
     openaiModel: parsed.data.OPENAI_MODEL,
     handbookApiKey: parsed.data.HANDBOOK_API_KEY,
+    hrApiKey: parsed.data.HANDBOOK_HR_API_KEY,
     port: parsed.data.PORT,
     maxRequestBytes: parsed.data.MAX_REQUEST_BYTES,
     maxChatMessages: parsed.data.MAX_CHAT_MESSAGES,

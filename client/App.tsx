@@ -19,6 +19,7 @@ import { ChatErrorAlert } from './features/chat/ChatErrorAlert';
 import { ChatHeader } from './features/chat/ChatHeader';
 import { EmptyState } from './features/chat/EmptyState';
 import { statusCopy } from './features/chat/examples';
+import { HrApp } from './features/hr/HrApp';
 
 const API_KEY_STORAGE_KEY = 'handbook-api-key';
 
@@ -202,6 +203,10 @@ function ChatClient({
   );
 }
 
+function isHrPath(): boolean {
+  return window.location.pathname.replace(/\/+$/, '') === '/hr';
+}
+
 export default function App() {
   const [apiKey, setApiKey] = useState(() => {
     try {
@@ -227,6 +232,10 @@ export default function App() {
       // The in-memory state still ends the session.
     }
     setApiKey('');
+  }
+
+  if (isHrPath()) {
+    return <HrApp />;
   }
 
   if (!apiKey) {
